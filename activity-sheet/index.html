@@ -140,7 +140,7 @@
     .field-input {
       position: absolute;
       background: transparent;
-      border: 1.5px dashed rgba(107, 44, 44, 0.28);
+      border: none;
       border-radius: 6px;
       font-family: var(--font-main);
       font-weight: 700;
@@ -148,7 +148,7 @@
       margin: 0;
       outline: none;
       resize: none;
-      transition: background-color 0.15s, border-color 0.15s, box-shadow 0.15s;
+      transition: background-color 0.15s;
       line-height: 1.3;
       overflow-y: auto;
     }
@@ -164,9 +164,7 @@
     }
 
     .field-input:focus {
-      background: rgba(255, 255, 255, 0.55);
-      border: 1.5px solid var(--primary) !important;
-      box-shadow: 0 0 0 3px rgba(107, 44, 44, 0.15);
+      background: rgba(255, 255, 255, 0.45);
       z-index: 10;
     }
 
@@ -248,12 +246,10 @@
     }
 
     .date-field-wrap:focus-within #field-date {
-      background: rgba(255, 255, 255, 0.55);
-      border: 1.5px solid var(--primary) !important;
-      box-shadow: 0 0 0 3px rgba(107, 44, 44, 0.15);
+      background: rgba(255, 255, 255, 0.45);
     }
 
-    /* 5. 一、活動簡介：<在此插入活動簡介> (Box 1: x=175..1572, y=749..993) */
+    /* 5. 一、活動簡介：<輸入活動簡介> (Box 1: x=175..1572, y=749..993) */
     #box-intro {
       left: 10.02%;
       top: 30.19%;
@@ -261,7 +257,7 @@
       height: 9.83%;
     }
 
-    /* 6. 二、活動過程：<在此插入活動過程> (Box 2: x=175..1572, y=1163..1571) */
+    /* 6. 二、活動過程：<輸入活動過程> (Box 2: x=175..1572, y=1163..1571) */
     #box-process {
       left: 10.02%;
       top: 46.88%;
@@ -269,7 +265,7 @@
       height: 16.45%;
     }
 
-    /* 7. 三、心得與反思：<在此插入> (Box 3: x=175..1198, y=1738..2415) */
+    /* 7. 三、心得與反思：<輸入心得與反思> (Box 3: x=175..1198, y=1738..2415) */
     #box-reflection {
       left: 10.02%;
       top: 70.05%;
@@ -285,15 +281,13 @@
       justify-content: center;
       padding: 1.4cqw 2.0cqw;
       border-radius: 1.8cqw;
-      border: 1.5px dashed rgba(107, 44, 44, 0.28);
-      transition: background-color 0.15s, border-color 0.15s, box-shadow 0.15s;
+      border: none;
+      transition: background-color 0.15s;
       cursor: text;
     }
 
     .box-container:focus-within {
-      background: rgba(255, 255, 255, 0.38);
-      border: 1.5px solid var(--primary) !important;
-      box-shadow: 0 0 0 3px rgba(107, 44, 44, 0.15);
+      background: rgba(255, 255, 255, 0.25);
       z-index: 10;
     }
 
@@ -544,7 +538,7 @@
   </header>
 
   <div class="hint-banner">
-    <span>💡 點擊下方學習單上的 <strong>&lt;欄位&gt;</strong> 即可輸入文字，完成後產生學習單。</span>
+    <span>💡 點擊下方學習單上的 <strong>&lt;欄位&gt;</strong> 即可輸入文字。</span>
   </div>
 
   <!-- 與原 PDF 完全同比例 (1747 : 2481) 的互動式學習單容器 -->
@@ -552,12 +546,12 @@
     <!-- 背景 Canvas -->
     <canvas id="bg-canvas" width="1747" height="2481"></canvas>
 
-    <!-- 1. <在此插入標題> -->
+    <!-- 1. <輸入標題> -->
     <input
       type="text"
       id="field-title"
       class="field-input"
-      placeholder="<在此插入標題>"
+      placeholder="<輸入標題>"
       autocomplete="off"
     />
 
@@ -596,33 +590,33 @@
       />
     </div>
 
-    <!-- 5. 一、活動簡介：<在此插入活動簡介> -->
+    <!-- 5. 一、活動簡介：<輸入活動簡介> -->
     <div class="box-container" id="box-intro" onclick="this.querySelector('textarea').focus()">
       <textarea
         id="field-intro"
         class="box-textarea"
         rows="1"
-        placeholder="<在此插入活動簡介>"
+        placeholder="<輸入活動簡介>"
       ></textarea>
     </div>
 
-    <!-- 6. 二、活動過程：<在此插入活動過程> -->
+    <!-- 6. 二、活動過程：<輸入活動過程> -->
     <div class="box-container" id="box-process" onclick="this.querySelector('textarea').focus()">
       <textarea
         id="field-process"
         class="box-textarea"
         rows="1"
-        placeholder="<在此插入活動過程>"
+        placeholder="<輸入活動過程>"
       ></textarea>
     </div>
 
-    <!-- 7. 三、心得與反思：<在此插入> -->
+    <!-- 7. 三、心得與反思：<輸入心得與反思> -->
     <div class="box-container" id="box-reflection" onclick="this.querySelector('textarea').focus()">
       <textarea
         id="field-reflection"
         class="box-textarea"
         rows="1"
-        placeholder="<在此插入>"
+        placeholder="<輸入心得與反思>"
       ></textarea>
     </div>
   </main>
