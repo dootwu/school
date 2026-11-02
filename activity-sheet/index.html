@@ -1,0 +1,1186 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>互動式活動學習單｜新化高中輔導室</title>
+  <!-- 引入與原 PDF 手寫書法/文楷風格相近的繁體中文字型 (霞鶩文楷 TC & Noto Serif TC) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@400;700&family=Noto+Serif+TC:wght@600;700&display=swap" rel="stylesheet">
+  <!-- 引入 jsPDF 用於產生與原 PDF 相同比例的 PDF 檔 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <!-- 引入 Base64 背景圖資料，避免本機直接開啟 file:// 時 Canvas 發生 CORS Tainted 錯誤導致無法送出 -->
+  <script src="bg-data.js"></script>
+
+  <style>
+    :root {
+      --bg-page: #f5ebe4;
+      --primary: #6b2c2c;
+      --primary-hover: #522020;
+      --accent: #758e6e;
+      --card-shadow: 0 10px 30px rgba(107, 44, 44, 0.14);
+      --font-main: 'LXGW WenKai TC', 'Kaiti TC', 'STKaiti', 'DFKai-SB', 'BiauKai', serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: var(--bg-page);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      color: #2c1e1e;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding-bottom: 96px;
+    }
+
+    /* 頂部導覽與工具列 */
+    .top-bar {
+      width: 100%;
+      max-width: 680px;
+      padding: 12px 16px;
+      display: flex;
+       flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 700;
+      font-size: 16px;
+      color: var(--primary);
+    }
+
+    .brand-badge {
+      background: var(--primary);
+      color: #fff;
+      font-size: 12px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-weight: 600;
+    }
+
+    .toolbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .tool-btn {
+      background: rgba(255, 255, 255, 0.85);
+      border: 1px solid rgba(107, 44, 44, 0.2);
+      color: var(--primary);
+      font-size: 13px;
+      font-weight: 600;
+      padding: 6px 11px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.15s ease;
+    }
+
+    .tool-btn:hover {
+      background: #fff;
+      border-color: var(--primary);
+    }
+
+    .tool-btn.active {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+    }
+
+    .hint-banner {
+      width: calc(100% - 24px);
+      max-width: 640px;
+      background: rgba(255, 255, 255, 0.75);
+      border-left: 4px solid var(--accent);
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      color: #4a3a3a;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    /* 學習單畫布主容器：鎖定與原 PDF 完全相同的長寬比例 (1747 : 2481) */
+    .worksheet-wrapper {
+      width: calc(100% - 20px);
+      max-width: 640px;
+      aspect-ratio: 1747 / 2481;
+      position: relative;
+      border-radius: 6px;
+      overflow: hidden;
+      box-shadow: var(--card-shadow);
+      background: #fde7d9;
+      container-type: inline-size;
+      user-select: none;
+    }
+
+    /* 底層 Canvas 背景 */
+    #bg-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      pointer-events: none;
+    }
+
+    /* 疊加在 Canvas 上的透明互動輸入欄位 */
+    .field-input {
+      position: absolute;
+      background: transparent;
+      border: 1.5px dashed rgba(107, 44, 44, 0.28);
+      border-radius: 6px;
+      font-family: var(--font-main);
+      font-weight: 700;
+      padding: 0.4cqw 0.8cqw;
+      margin: 0;
+      outline: none;
+      resize: none;
+      transition: background-color 0.15s, border-color 0.15s, box-shadow 0.15s;
+      line-height: 1.35;
+      overflow-y: auto;
+    }
+
+    .worksheet-wrapper.hide-borders .field-input:not(:focus) {
+      border-color: transparent;
+    }
+
+    .field-input::placeholder {
+      color: rgba(44, 30, 30, 0.42);
+      font-weight: 700;
+      transition: opacity 0.15s;
+    }
+
+    .field-input.meta-field::placeholder {
+      color: rgba(107, 44, 44, 0.45);
+    }
+
+    .field-input:focus {
+      background: rgba(255, 255, 255, 0.55);
+      border: 1.5px solid var(--primary) !important;
+      box-shadow: 0 0 0 3px rgba(107, 44, 44, 0.15);
+      z-index: 10;
+    }
+
+    .field-input:focus::placeholder {
+      opacity: 0.25;
+    }
+
+    /*
+      ========================================================
+      7 個 <...> 欄位精準百分比定位 (對應 1747 x 2481 原生座標)
+      ========================================================
+    */
+
+    /* 1. <在此插入標題> (centerY = 169.5 / 2481 = 6.83%) */
+    #field-title {
+      left: 10.02%;
+      top: 5.11%;
+      width: 79.96%;
+      height: 3.45%;
+      text-align: center;
+      color: #000000;
+      font-size: 3.33cqw;
+    }
+
+    /* 2. ＜班級＞ (x = 515 / 1747 = 29.48%, centerY = 464.5 / 2481 = 18.72%) */
+    #field-class {
+      left: 29.48%;
+      top: 17.30%;
+      width: 19.10%;
+      height: 2.85%;
+      text-align: left;
+      color: #6b2c2c;
+      font-size: 3.20cqw;
+    }
+
+    /* 3. ＜姓名＞ (x = 1142 / 1747 = 65.37%, centerY = 464.5 / 2481 = 18.72%) */
+    #field-name {
+      left: 65.37%;
+      top: 17.30%;
+      width: 24.65%;
+      height: 2.85%;
+      text-align: left;
+      color: #6b2c2c;
+      font-size: 3.20cqw;
+    }
+
+    /* 4. ＜日期＞ (x = 522 / 1747 = 29.88%, centerY = 539.5 / 2481 = 21.75%) */
+    .date-field-wrap {
+      position: absolute;
+      left: 29.88%;
+      top: 20.32%;
+      width: 18.80%;
+      height: 2.85%;
+    }
+
+    #field-date {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      text-align: left;
+      color: #6b2c2c;
+      font-size: 3.20cqw;
+      pointer-events: none;
+    }
+
+    #field-date-picker {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      cursor: pointer;
+      border: none;
+      margin: 0;
+      padding: 0;
+      z-index: 2;
+    }
+
+    .date-field-wrap:focus-within #field-date {
+      background: rgba(255, 255, 255, 0.55);
+      border: 1.5px solid var(--primary) !important;
+      box-shadow: 0 0 0 3px rgba(107, 44, 44, 0.15);
+    }
+
+    /* 5. 一、活動簡介：<在此插入活動簡介> (Box 1: x=175..1572, y=749..993) */
+    #box-intro {
+      left: 10.02%;
+      top: 30.19%;
+      width: 79.96%;
+      height: 9.83%;
+    }
+
+    /* 6. 二、活動過程：<在此插入活動過程> (Box 2: x=175..1572, y=1163..1571) */
+    #box-process {
+      left: 10.02%;
+      top: 46.88%;
+      width: 79.96%;
+      height: 16.45%;
+    }
+
+    /* 7. 三、心得與反思：<在此插入> (Box 3: x=175..1198, y=1738..2415) */
+    #box-reflection {
+      left: 10.02%;
+      top: 70.05%;
+      width: 58.56%;
+      height: 27.29%;
+    }
+
+    /* 3 個大格子的包裝容器（為了支援垂直置中與多行輸入） */
+    .box-container {
+      position: absolute;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 1.4cqw 2.0cqw;
+      border-radius: 1.8cqw;
+      border: 1.5px dashed rgba(107, 44, 44, 0.28);
+      transition: background-color 0.15s, border-color 0.15s, box-shadow 0.15s;
+      cursor: text;
+    }
+
+    .worksheet-wrapper.hide-borders .box-container:not(:focus-within) {
+      border-color: transparent;
+    }
+
+    .box-container:focus-within {
+      background: rgba(255, 255, 255, 0.38);
+      border: 1.5px solid var(--primary) !important;
+      box-shadow: 0 0 0 3px rgba(107, 44, 44, 0.15);
+      z-index: 10;
+    }
+
+    .box-textarea {
+      width: 100%;
+      max-height: 100%;
+      background: transparent;
+      border: none;
+      outline: none;
+      resize: none;
+      padding: 0;
+      margin: 0;
+      font-family: var(--font-main);
+      font-weight: 700;
+      color: #000000;
+      font-size: 3.45cqw;
+      line-height: 1.42;
+      text-align: center;
+      overflow-y: auto;
+    }
+
+    .box-container.align-left {
+      justify-content: flex-start;
+    }
+
+    .box-container.align-left .box-textarea {
+      text-align: left;
+      height: 100%;
+    }
+
+    .box-textarea::placeholder {
+      color: rgba(0, 0, 0, 0.42);
+      font-weight: 700;
+    }
+
+    .box-textarea:focus::placeholder {
+      opacity: 0.25;
+    }
+
+    /* 底部固定送出操作列 */
+    .bottom-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(255, 250, 246, 0.94);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border-top: 1px solid rgba(107, 44, 44, 0.15);
+      padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      z-index: 50;
+    }
+
+    .bottom-inner {
+      width: 100%;
+      max-width: 640px;
+      display: flex;
+      gap: 10px;
+    }
+
+    .btn-primary {
+      flex: 1;
+      background: var(--primary);
+      color: #ffffff;
+      border: none;
+      border-radius: 12px;
+      padding: 14px 20px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 4px 14px rgba(107, 44, 44, 0.28);
+      transition: transform 0.1s, background-color 0.15s;
+    }
+
+    .btn-primary:active {
+      transform: scale(0.98);
+    }
+
+    .btn-secondary {
+      background: #ffffff;
+      color: var(--primary);
+      border: 1.5px solid rgba(107, 44, 44, 0.3);
+      border-radius: 12px;
+      padding: 14px 16px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    /* 匯出預覽與下載 Modal */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(28, 18, 18, 0.72);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      z-index: 100;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .modal-backdrop.open {
+      display: flex;
+    }
+
+    .modal-card {
+      background: #fffaf6;
+      width: 100%;
+      max-width: 500px;
+      max-height: 92dvh;
+      border-radius: 18px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+      animation: modalIn 0.2s ease-out;
+    }
+
+    @keyframes modalIn {
+      from { opacity: 0; transform: translateY(14px) scale(0.97); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .modal-header {
+      padding: 14px 18px;
+      border-bottom: 1px solid rgba(107, 44, 44, 0.12);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .modal-title {
+      font-weight: 700;
+      font-size: 17px;
+      color: var(--primary);
+    }
+
+    .modal-close {
+      background: rgba(107, 44, 44, 0.08);
+      border: none;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      font-size: 18px;
+      color: var(--primary);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-body {
+      padding: 14px 18px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .save-tip {
+      width: 100%;
+      background: #eef5ec;
+      border: 1px solid #c5dac0;
+      color: #2f4b29;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      text-align: center;
+      font-weight: 600;
+    }
+
+    .preview-img-wrap {
+      width: 100%;
+      max-width: 340px;
+      aspect-ratio: 1747 / 2481;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      background: #fde7d9;
+    }
+
+    #preview-img {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: contain;
+    }
+
+    .modal-footer {
+      padding: 14px 18px calc(14px + env(safe-area-inset-bottom));
+      border-top: 1px solid rgba(107, 44, 44, 0.12);
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      background: #fff;
+    }
+
+    .btn-download {
+      padding: 13px 14px;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      text-decoration: none;
+    }
+
+    .btn-img {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .btn-pdf {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .btn-share {
+      grid-column: 1 / -1;
+      background: #f3eae4;
+      color: var(--primary);
+      border: 1px solid rgba(107, 44, 44, 0.22);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 頂部工具列 -->
+  <header class="top-bar">
+    <div class="brand">
+      <span class="brand-badge">新化高中輔導室</span>
+      <span>互動式活動學習單</span>
+    </div>
+    <div class="toolbar-actions">
+      <button type="button" class="tool-btn" id="btn-align" title="切換三個大框文字置中或靠左">
+        <span>📝 對齊：</span><span id="align-label">置中</span>
+      </button>
+      <button type="button" class="tool-btn" id="btn-fontsize" title="切換文字大小">
+        <span>🔠 字級：</span><span id="fontsize-label">適中</span>
+      </button>
+      <button type="button" class="tool-btn" id="btn-borders" title="顯示或隱藏輸入框提示線">
+        <span>👁️ 框線</span>
+      </button>
+      <button type="button" class="tool-btn" id="btn-clear" title="清空所有輸入內容">
+        <span>🗑️ 重填</span>
+      </button>
+    </div>
+  </header>
+
+  <div class="hint-banner">
+    <span>💡 點擊下方學習單上的 <strong>&lt;...&gt; 欄位</strong> 即可直接輸入文字，完成後點擊底部按鈕輸出圖片或 PDF。</span>
+  </div>
+
+  <!-- 與原 PDF 完全同比例 (1747 : 2481) 的互動式學習單容器 -->
+  <main class="worksheet-wrapper" id="worksheet">
+    <!-- 背景 Canvas -->
+    <canvas id="bg-canvas" width="1747" height="2481"></canvas>
+
+    <!-- 1. <在此插入標題> -->
+    <input
+      type="text"
+      id="field-title"
+      class="field-input"
+      placeholder="<在此插入標題>"
+      autocomplete="off"
+    />
+
+    <!-- 2. ＜班級＞ -->
+    <input
+      type="text"
+      id="field-class"
+      class="field-input meta-field"
+      placeholder="＜班級＞"
+      autocomplete="off"
+    />
+
+    <!-- 3. ＜姓名＞ -->
+    <input
+      type="text"
+      id="field-name"
+      class="field-input meta-field"
+      placeholder="＜姓名＞"
+      autocomplete="off"
+    />
+
+    <!-- 4. ＜日期＞ (點擊直接彈出日曆選擇器) -->
+    <div class="date-field-wrap" title="點擊選擇活動日期">
+      <input
+        type="text"
+        id="field-date"
+        class="field-input meta-field"
+        placeholder="＜日期＞"
+        readonly
+        tabindex="-1"
+      />
+      <input
+        type="date"
+        id="field-date-picker"
+        aria-label="選擇活動日期"
+      />
+    </div>
+
+    <!-- 5. 一、活動簡介：<在此插入活動簡介> -->
+    <div class="box-container" id="box-intro" onclick="this.querySelector('textarea').focus()">
+      <textarea
+        id="field-intro"
+        class="box-textarea"
+        rows="1"
+        placeholder="<在此插入活動簡介>"
+      ></textarea>
+    </div>
+
+    <!-- 6. 二、活動過程：<在此插入活動過程> -->
+    <div class="box-container" id="box-process" onclick="this.querySelector('textarea').focus()">
+      <textarea
+        id="field-process"
+        class="box-textarea"
+        rows="1"
+        placeholder="<在此插入活動過程>"
+      ></textarea>
+    </div>
+
+    <!-- 7. 三、心得與反思：<在此插入> -->
+    <div class="box-container" id="box-reflection" onclick="this.querySelector('textarea').focus()">
+      <textarea
+        id="field-reflection"
+        class="box-textarea"
+        rows="1"
+        placeholder="<在此插入>"
+      ></textarea>
+    </div>
+  </main>
+
+  <!-- 底部固定操作列 -->
+  <div class="bottom-bar">
+    <div class="bottom-inner">
+      <button type="button" class="btn-primary" id="btn-export">
+        <span>✨ 送出並產生學習單（圖片 / PDF）</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- 輸出預覽與下載 Modal -->
+  <div class="modal-backdrop" id="export-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <span class="modal-title">🎉 學習單已產生！</span>
+        <button type="button" class="modal-close" id="modal-close" aria-label="關閉">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="save-tip">
+          📱 手機使用者可<strong>長按下方圖片直接儲存至相簿</strong>，或點擊下方按鈕下載圖片 / PDF 檔。
+        </div>
+        <div class="preview-img-wrap">
+          <img id="preview-img" alt="學習單預覽圖" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-download btn-img" id="btn-download-png">
+          🖼️ 下載照片 (PNG)
+        </button>
+        <button type="button" class="btn-download btn-pdf" id="btn-download-pdf">
+          📄 下載 PDF 檔
+        </button>
+        <button type="button" class="btn-download btn-share" id="btn-share-native" style="display: none;">
+          📤 手機一鍵分享 / 傳送至 LINE 或檔案
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 原生高解析度畫布尺寸 (與原 PDF 1746.875 x 2481.25 完全對應)
+    const CANVAS_W = 1747;
+    const CANVAS_H = 2481;
+
+    const bgCanvas = document.getElementById('bg-canvas');
+    const bgCtx = bgCanvas.getContext('2d');
+
+    // 載入從原 PDF 提取並移除 <...> 佔位字的高解析度背景圖 (優先使用 Base64 避免 file:// CORS 限制)
+    const bgImage = new Image();
+    bgImage.onload = () => {
+      bgCtx.drawImage(bgImage, 0, 0, CANVAS_W, CANVAS_H);
+    };
+    bgImage.src = window.BG_CLEAN_DATA_URL || 'bg-clean.png';
+
+    // 欄位 DOM 參照
+    const fields = {
+      title: document.getElementById('field-title'),
+      className: document.getElementById('field-class'),
+      studentName: document.getElementById('field-name'),
+      date: document.getElementById('field-date'),
+      intro: document.getElementById('field-intro'),
+      process: document.getElementById('field-process'),
+      reflection: document.getElementById('field-reflection'),
+    };
+    const datePicker = document.getElementById('field-date-picker');
+
+    // 點擊日期時在支援 showPicker 的桌面/手機瀏覽器直接彈出日曆
+    datePicker.addEventListener('click', () => {
+      if (typeof datePicker.showPicker === 'function') {
+        try {
+          datePicker.showPicker();
+        } catch (e) {}
+      }
+    });
+
+    datePicker.addEventListener('change', () => {
+      if (datePicker.value) {
+        // 將 YYYY-MM-DD 轉為 YYYY/MM/DD 顯示
+        fields.date.value = datePicker.value.replace(/-/g, '/');
+      } else {
+        fields.date.value = '';
+      }
+      saveDraft();
+    });
+
+    const boxContainers = [
+      document.getElementById('box-intro'),
+      document.getElementById('box-process'),
+      document.getElementById('box-reflection'),
+    ];
+
+    // 狀態設定（字級僅保留「適中」與「小」）
+    let boxAlign = 'center'; // 'center' | 'left'
+    const fontScaleSteps = [
+      { label: '適中', scale: 1.0, cqw: 3.45 },
+      { label: '小', scale: 0.78, cqw: 2.7 },
+    ];
+    let fontScaleIdx = 0;
+
+    // Textarea 高度自動伸縮（使垂直置中自然運作）
+    function autoResizeTextarea(ta) {
+      if (boxAlign === 'left') {
+        ta.style.height = '100%';
+        return;
+      }
+      ta.style.height = 'auto';
+      const parentH = ta.parentElement.clientHeight - 12;
+      ta.style.height = Math.min(ta.scrollHeight, parentH) + 'px';
+    }
+
+    [fields.intro, fields.process, fields.reflection].forEach(ta => {
+      ta.addEventListener('input', () => {
+        autoResizeTextarea(ta);
+        saveDraft();
+      });
+    });
+
+    [fields.title, fields.className, fields.studentName, fields.date].forEach(inp => {
+      inp.addEventListener('input', saveDraft);
+    });
+
+    window.addEventListener('resize', () => {
+      [fields.intro, fields.process, fields.reflection].forEach(autoResizeTextarea);
+    });
+
+    // 自動儲存與載入草稿
+    const STORAGE_KEY = 'shinhua_worksheet_draft_v1';
+    function saveDraft() {
+      const data = {};
+      for (const [k, el] of Object.entries(fields)) {
+        data[k] = el.value;
+      }
+      data.boxAlign = boxAlign;
+      data.fontScaleIdx = fontScaleIdx;
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      } catch (e) {}
+    }
+
+    function loadDraft() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return;
+        const data = JSON.parse(raw);
+        for (const [k, el] of Object.entries(fields)) {
+          if (typeof data[k] === 'string') el.value = data[k];
+        }
+        if (fields.date.value) {
+          datePicker.value = fields.date.value.replace(/\//g, '-');
+        }
+        if (data.boxAlign === 'left' || data.boxAlign === 'center') {
+          setBoxAlign(data.boxAlign);
+        }
+        if (typeof data.fontScaleIdx === 'number') {
+          fontScaleIdx = fontScaleSteps[data.fontScaleIdx] ? data.fontScaleIdx : 0;
+          applyFontScale();
+        }
+        setTimeout(() => {
+          [fields.intro, fields.process, fields.reflection].forEach(autoResizeTextarea);
+        }, 50);
+      } catch (e) {}
+    }
+
+    // 對齊切換
+    function setBoxAlign(align) {
+      boxAlign = align;
+      document.getElementById('align-label').textContent = align === 'center' ? '置中' : '靠左';
+      boxContainers.forEach(c => {
+        c.classList.toggle('align-left', align === 'left');
+      });
+      [fields.intro, fields.process, fields.reflection].forEach(autoResizeTextarea);
+      saveDraft();
+    }
+
+    document.getElementById('btn-align').addEventListener('click', () => {
+      setBoxAlign(boxAlign === 'center' ? 'left' : 'center');
+    });
+
+    // 字級切換
+    function applyFontScale() {
+      const step = fontScaleSteps[fontScaleIdx];
+      document.getElementById('fontsize-label').textContent = step.label;
+      [fields.intro, fields.process, fields.reflection].forEach(ta => {
+        ta.style.fontSize = `${step.cqw}cqw`;
+        autoResizeTextarea(ta);
+      });
+      saveDraft();
+    }
+
+    document.getElementById('btn-fontsize').addEventListener('click', () => {
+      fontScaleIdx = (fontScaleIdx + 1) % fontScaleSteps.length;
+      applyFontScale();
+    });
+
+    // 框線顯示/隱藏
+    const worksheetEl = document.getElementById('worksheet');
+    const btnBorders = document.getElementById('btn-borders');
+    btnBorders.addEventListener('click', () => {
+      const hidden = worksheetEl.classList.toggle('hide-borders');
+      btnBorders.classList.toggle('active', !hidden);
+    });
+
+    // 清除重填
+    document.getElementById('btn-clear').addEventListener('click', () => {
+      if (!confirm('確定要清空目前填寫的所有內容嗎？')) return;
+      for (const el of Object.values(fields)) {
+        el.value = '';
+      }
+      datePicker.value = '';
+      [fields.intro, fields.process, fields.reflection].forEach(autoResizeTextarea);
+      saveDraft();
+    });
+
+    // =========================================================================
+    // Canvas 高解析度合成引擎 (將底圖 + 7 個欄位文字精準繪製到 1747 x 2481 畫布)
+    // =========================================================================
+
+    /**
+     * 將多行/長文字依照最大寬度自動斷行
+     */
+    function wrapTextLines(ctx, text, maxWidth) {
+      if (!text || !text.trim()) return [];
+      const paragraphs = text.replace(/\r\n/g, '\n').split('\n');
+      const lines = [];
+
+      for (const para of paragraphs) {
+        if (para === '') {
+          lines.push('');
+          continue;
+        }
+        let currentLine = '';
+        for (const char of para) {
+          const testLine = currentLine + char;
+          const metrics = ctx.measureText(testLine);
+          if (metrics.width > maxWidth && currentLine.length > 0) {
+            lines.push(currentLine);
+            currentLine = char;
+          } else {
+            currentLine = testLine;
+          }
+        }
+        if (currentLine) {
+          lines.push(currentLine);
+        }
+      }
+      return lines;
+    }
+
+    /**
+     * 在指定方框區域內繪製多行文字（若文字過多會自動微調縮小字級以確保不超出方框）
+     */
+    function drawBoxText(ctx, text, boxRect, options = {}) {
+      if (!text || !text.trim()) return;
+      const {
+        baseFontSize = 64,
+        color = '#000000',
+        align = 'center',
+        paddingX = 44,
+        paddingY = 32,
+        lineHeightRatio = 1.42,
+      } = options;
+
+      const innerX = boxRect.x + paddingX;
+      const innerY = boxRect.y + paddingY;
+      const innerW = boxRect.w - paddingX * 2;
+      const innerH = boxRect.h - paddingY * 2;
+
+      let fontSize = baseFontSize;
+      const minFontSize = 26;
+      let lines = [];
+      let lineHeight = fontSize * lineHeightRatio;
+
+      // 自動縮字以確保總高度不超過方框高度
+      while (fontSize >= minFontSize) {
+        ctx.font = `700 ${fontSize}px "LXGW WenKai TC", "Kaiti TC", "STKaiti", "DFKai-SB", serif`;
+        lines = wrapTextLines(ctx, text, innerW);
+        lineHeight = fontSize * lineHeightRatio;
+        if (lines.length * lineHeight <= innerH || fontSize === minFontSize) {
+          break;
+        }
+        fontSize -= 2;
+      }
+
+      ctx.fillStyle = color;
+      ctx.textBaseline = 'middle';
+
+      const totalTextH = lines.length * lineHeight;
+      let startY;
+      if (align === 'center') {
+        startY = boxRect.y + (boxRect.h - totalTextH) / 2 + lineHeight / 2;
+        ctx.textAlign = 'center';
+      } else {
+        startY = innerY + lineHeight / 2;
+        ctx.textAlign = 'left';
+      }
+
+      const drawX = align === 'center' ? boxRect.x + boxRect.w / 2 : innerX;
+
+      lines.forEach((line, i) => {
+        const y = startY + i * lineHeight;
+        ctx.fillText(line, drawX, y);
+      });
+    }
+
+    /**
+     * 在單行欄位繪製文字（若超出寬度自動縮小字級）
+     */
+    function drawSingleLineField(ctx, text, rect, options = {}) {
+      if (!text || !text.trim()) return;
+      const {
+        baseFontSize = 58,
+        color = '#000000',
+        align = 'left',
+      } = options;
+
+      const cleanText = text.trim();
+      let fontSize = baseFontSize;
+      const minFontSize = 28;
+
+      while (fontSize >= minFontSize) {
+        ctx.font = `700 ${fontSize}px "LXGW WenKai TC", "Kaiti TC", "STKaiti", "DFKai-SB", serif`;
+        if (ctx.measureText(cleanText).width <= rect.w || fontSize === minFontSize) {
+          break;
+        }
+        fontSize -= 2;
+      }
+
+      ctx.fillStyle = color;
+      ctx.textBaseline = 'middle';
+      ctx.textAlign = align;
+
+      const drawX = align === 'center' ? rect.x + rect.w / 2 : rect.x;
+      const drawY = rect.y + rect.h / 2;
+      ctx.fillText(cleanText, drawX, drawY);
+    }
+
+    /**
+     * 合成完整學習單至高解析度離屏 Canvas 並回傳 Canvas
+     */
+    async function renderExportCanvas() {
+      // 確保字型已載入完畢（設定逾時保護避免網路不佳時卡住）
+      if (document.fonts && document.fonts.ready) {
+        try {
+          await Promise.race([
+            document.fonts.ready,
+            new Promise(resolve => setTimeout(resolve, 1200)),
+          ]);
+        } catch (e) {}
+      }
+
+      // 確保底圖已載入
+      if (!bgImage.complete || bgImage.naturalWidth === 0) {
+        await new Promise((resolve) => {
+          bgImage.onload = resolve;
+          bgImage.onerror = resolve;
+        });
+      }
+
+      const outCanvas = document.createElement('canvas');
+      outCanvas.width = CANVAS_W;
+      outCanvas.height = CANVAS_H;
+      const ctx = outCanvas.getContext('2d');
+
+      // 1. 先鋪滿原 PDF 底色並繪製高清底圖
+      ctx.fillStyle = '#fde7d9';
+      ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+      if (bgImage.naturalWidth > 0) {
+        ctx.drawImage(bgImage, 0, 0, CANVAS_W, CANVAS_H);
+      }
+
+      const scaleMul = fontScaleSteps[fontScaleIdx].scale;
+
+      // 2. 繪製上方 4 個單行欄位（與原 PDF 座標與顏色 1:1 對應）
+      // (1) <在此插入標題> (原 PDF: centerY = 169.5, fontSize = 58.3, color = #000000)
+      drawSingleLineField(
+        ctx,
+        fields.title.value,
+        { x: 175, y: 132, w: 1397, h: 75 },
+        { baseFontSize: 58, color: '#000000', align: 'center' }
+      );
+
+      // (2) ＜班級＞ (原 PDF: x=519, centerY=464.5, fontSize=58.3, color=#6b2c2c)
+      drawSingleLineField(
+        ctx,
+        fields.className.value,
+        { x: 515, y: 429, w: 330, h: 72 },
+        { baseFontSize: 56, color: '#6b2c2c', align: 'left' }
+      );
+
+      // (3) ＜姓名＞ (原 PDF: x=1146, centerY=464.5, fontSize=58.3, color=#6b2c2c)
+      drawSingleLineField(
+        ctx,
+        fields.studentName.value,
+        { x: 1140, y: 429, w: 432, h: 72 },
+        { baseFontSize: 56, color: '#6b2c2c', align: 'left' }
+      );
+
+      // (4) ＜日期＞ (原 PDF: x=526, centerY=539.5, fontSize=58.3, color=#6b2c2c)
+      drawSingleLineField(
+        ctx,
+        fields.date.value,
+        { x: 520, y: 504, w: 330, h: 72 },
+        { baseFontSize: 56, color: '#6b2c2c', align: 'left' }
+      );
+
+      // 3. 繪製下方 3 個大格子多行內容
+      const baseBoxFontSize = Math.round(62 * scaleMul);
+
+      // (5) 一、活動簡介 (Box 1: x=175, y=749, w=1397, h=244)
+      drawBoxText(
+        ctx,
+        fields.intro.value,
+        { x: 175, y: 749, w: 1397, h: 244 },
+        { baseFontSize: baseBoxFontSize, color: '#000000', align: boxAlign }
+      );
+
+      // (6) 二、活動過程 (Box 2: x=175, y=1163, w=1397, h=408)
+      drawBoxText(
+        ctx,
+        fields.process.value,
+        { x: 175, y: 1163, w: 1397, h: 408 },
+        { baseFontSize: baseBoxFontSize, color: '#000000', align: boxAlign }
+      );
+
+      // (7) 三、心得與反思 (Box 3: x=175, y=1738, w=1023, h=677)
+      drawBoxText(
+        ctx,
+        fields.reflection.value,
+        { x: 175, y: 1738, w: 1023, h: 677 },
+        { baseFontSize: baseBoxFontSize, color: '#000000', align: boxAlign }
+      );
+
+      return outCanvas;
+    }
+
+    // =========================================================================
+    // 送出預覽、下載 PNG 照片、下載同比例 PDF、手機原生分享
+    // =========================================================================
+    const exportModal = document.getElementById('export-modal');
+    const previewImg = document.getElementById('preview-img');
+    const btnShareNative = document.getElementById('btn-share-native');
+    let latestCanvas = null;
+    let latestDataUrl = '';
+
+    function getExportFileName(ext) {
+      const name = fields.studentName.value.trim() || '同學';
+      const title = fields.title.value.trim() || '活動學習單';
+      return `${title}_${name}.${ext}`;
+    }
+
+    document.getElementById('btn-export').addEventListener('click', async () => {
+      latestCanvas = await renderExportCanvas();
+      latestDataUrl = latestCanvas.toDataURL('image/png');
+      previewImg.src = latestDataUrl;
+
+      // 檢查是否支援手機 Web Share API 分享檔案
+      if (navigator.canShare) {
+        btnShareNative.style.display = 'flex';
+      }
+
+      exportModal.classList.add('open');
+    });
+
+    document.getElementById('modal-close').addEventListener('click', () => {
+      exportModal.classList.remove('open');
+    });
+
+    exportModal.addEventListener('click', (e) => {
+      if (e.target === exportModal) {
+        exportModal.classList.remove('open');
+      }
+    });
+
+    // 下載 PNG 圖片
+    document.getElementById('btn-download-png').addEventListener('click', () => {
+      if (!latestDataUrl) return;
+      const link = document.createElement('a');
+      link.download = getExportFileName('png');
+      link.href = latestDataUrl;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    });
+
+    // 下載與原 PDF 完全相同比例的 PDF 檔 (419.25 pt x 595.5 pt，對應 1747 : 2481)
+    document.getElementById('btn-download-pdf').addEventListener('click', () => {
+      if (!latestCanvas) return;
+      const { jsPDF } = window.jspdf;
+      const pdfW = 419.25;
+      const pdfH = 595.5;
+
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'pt',
+        format: [pdfW, pdfH],
+        compress: true,
+      });
+
+      // 使用高品質 JPEG 嵌入 PDF 以兼顧畫質與檔案大小
+      const jpegDataUrl = latestCanvas.toDataURL('image/jpeg', 0.95);
+      pdf.addImage(jpegDataUrl, 'JPEG', 0, 0, pdfW, pdfH);
+      pdf.save(getExportFileName('pdf'));
+    });
+
+    // 手機原生分享 (可傳送到 LINE / 儲存影像 / 儲存到檔案)
+    btnShareNative.addEventListener('click', async () => {
+      if (!latestCanvas) return;
+      latestCanvas.toBlob(async (blob) => {
+        if (!blob) return;
+        const file = new File([blob], getExportFileName('png'), { type: 'image/png' });
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          try {
+            await navigator.share({
+              title: fields.title.value.trim() || '活動學習單',
+              files: [file],
+            });
+          } catch (err) {}
+        }
+      }, 'image/png');
+    });
+
+    // 初始化載入草稿
+    loadDraft();
+  </script>
+</body>
+</html>
