@@ -10,7 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@400;700&family=Noto+Serif+TC:wght@600;700&display=swap" rel="stylesheet">
   <!-- 引入 jsPDF 用於產生與原 PDF 相同比例的 PDF 檔 -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <!-- 引入 Base64 背景圖資料，避免本機直接開啟 file:// 時 Canvas 發生 CORS Tainted 錯誤導致無法送出 -->
+  <!-- 引入 Base64 背景圖資料，避免本機直接開啟 file:// 時 Canvas 發生 CORS Tainted 錯誤 -->
   <script src="bg-data.js"></script>
 
   <style>
@@ -47,7 +47,7 @@
       max-width: 680px;
       padding: 12px 16px;
       display: flex;
-       flex-wrap: wrap;
+      flex-wrap: wrap;
       align-items: center;
       justify-content: space-between;
       gap: 8px;
@@ -98,12 +98,6 @@
       border-color: var(--primary);
     }
 
-    .tool-btn.active {
-      background: var(--primary);
-      color: #fff;
-      border-color: var(--primary);
-    }
-
     .hint-banner {
       width: calc(100% - 24px);
       max-width: 640px;
@@ -150,17 +144,13 @@
       border-radius: 6px;
       font-family: var(--font-main);
       font-weight: 700;
-      padding: 0.4cqw 0.8cqw;
+      padding: 0.2cqw 0.6cqw;
       margin: 0;
       outline: none;
       resize: none;
       transition: background-color 0.15s, border-color 0.15s, box-shadow 0.15s;
-      line-height: 1.35;
+      line-height: 1.3;
       overflow-y: auto;
-    }
-
-    .worksheet-wrapper.hide-borders .field-input:not(:focus) {
-      border-color: transparent;
     }
 
     .field-input::placeholder {
@@ -186,11 +176,12 @@
 
     /*
       ========================================================
-      7 個 <...> 欄位精準百分比定位 (對應 1747 x 2481 原生座標)
+      7 個欄位精準百分比定位 (對應 1747 x 2481 原生座標)
+      「班級」與「活動日期」已往左對齊至「一、活動簡介」
       ========================================================
     */
 
-    /* 1. <在此插入標題> (centerY = 169.5 / 2481 = 6.83%) */
+    /* 1. <在此插入標題> */
     #field-title {
       left: 10.02%;
       top: 5.11%;
@@ -201,34 +192,34 @@
       font-size: 3.33cqw;
     }
 
-    /* 2. ＜班級＞ (x = 515 / 1747 = 29.48%, centerY = 464.5 / 2481 = 18.72%) */
+    /* 2. ＜班級＞ (x = 452 / 1747 = 25.87%, w = 415 / 1747 = 23.75%) */
     #field-class {
-      left: 29.48%;
+      left: 25.87%;
       top: 17.30%;
-      width: 19.10%;
+      width: 23.75%;
       height: 2.85%;
       text-align: left;
       color: #6b2c2c;
-      font-size: 3.20cqw;
+      font-size: 3.05cqw;
     }
 
-    /* 3. ＜姓名＞ (x = 1142 / 1747 = 65.37%, centerY = 464.5 / 2481 = 18.72%) */
+    /* 3. ＜姓名＞ (x = 1154 / 1747 = 66.06%, w = 418 / 1747 = 23.93%) */
     #field-name {
-      left: 65.37%;
+      left: 66.06%;
       top: 17.30%;
-      width: 24.65%;
+      width: 23.93%;
       height: 2.85%;
       text-align: left;
       color: #6b2c2c;
-      font-size: 3.20cqw;
+      font-size: 3.05cqw;
     }
 
-    /* 4. ＜日期＞ (x = 522 / 1747 = 29.88%, centerY = 539.5 / 2481 = 21.75%) */
+    /* 4. ＜日期＞ (x = 458 / 1747 = 26.22%, w = 416 / 1747 = 23.81%) */
     .date-field-wrap {
       position: absolute;
-      left: 29.88%;
+      left: 26.22%;
       top: 20.32%;
-      width: 18.80%;
+      width: 23.81%;
       height: 2.85%;
     }
 
@@ -239,7 +230,7 @@
       height: 100%;
       text-align: left;
       color: #6b2c2c;
-      font-size: 3.20cqw;
+      font-size: 2.95cqw;
       pointer-events: none;
     }
 
@@ -297,10 +288,6 @@
       border: 1.5px dashed rgba(107, 44, 44, 0.28);
       transition: background-color 0.15s, border-color 0.15s, box-shadow 0.15s;
       cursor: text;
-    }
-
-    .worksheet-wrapper.hide-borders .box-container:not(:focus-within) {
-      border-color: transparent;
     }
 
     .box-container:focus-within {
@@ -392,21 +379,6 @@
       transform: scale(0.98);
     }
 
-    .btn-secondary {
-      background: #ffffff;
-      color: var(--primary);
-      border: 1.5px solid rgba(107, 44, 44, 0.3);
-      border-radius: 12px;
-      padding: 14px 16px;
-      font-size: 15px;
-      font-weight: 700;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-    }
-
     /* 匯出預覽與下載 Modal */
     .modal-backdrop {
       position: fixed;
@@ -418,7 +390,7 @@
       display: none;
       align-items: center;
       justify-content: center;
-      padding: 16px;
+      padding: 12px;
     }
 
     .modal-backdrop.open {
@@ -428,7 +400,7 @@
     .modal-card {
       background: #fffaf6;
       width: 100%;
-      max-width: 500px;
+      max-width: 480px;
       max-height: 92dvh;
       border-radius: 18px;
       display: flex;
@@ -444,11 +416,12 @@
     }
 
     .modal-header {
-      padding: 14px 18px;
+      padding: 12px 18px;
       border-bottom: 1px solid rgba(107, 44, 44, 0.12);
       display: flex;
       align-items: center;
       justify-content: space-between;
+      flex-shrink: 0;
     }
 
     .modal-title {
@@ -472,12 +445,15 @@
     }
 
     .modal-body {
-      padding: 14px 18px;
+      padding: 12px 16px;
       overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
+      flex: 1;
+      min-height: 0;
     }
 
     .save-tip {
@@ -490,14 +466,15 @@
       font-size: 13px;
       text-align: center;
       font-weight: 600;
+      flex-shrink: 0;
     }
 
+    /* 修正 Flexbox 裁切問題：確保整張學習單從頭到尾 100% 完整顯示不被遮擋 */
     .preview-img-wrap {
       width: 100%;
-      max-width: 340px;
-      aspect-ratio: 1747 / 2481;
+      max-width: 360px;
+      flex-shrink: 0;
       border-radius: 8px;
-      overflow: hidden;
       box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
       border: 1px solid rgba(0, 0, 0, 0.08);
       background: #fde7d9;
@@ -505,18 +482,19 @@
 
     #preview-img {
       width: 100%;
-      height: 100%;
+      height: auto;
       display: block;
-      object-fit: contain;
+      border-radius: 8px;
     }
 
     .modal-footer {
-      padding: 14px 18px calc(14px + env(safe-area-inset-bottom));
+      padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
       border-top: 1px solid rgba(107, 44, 44, 0.12);
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 10px;
       background: #fff;
+      flex-shrink: 0;
     }
 
     .btn-download {
@@ -542,18 +520,11 @@
       background: var(--primary);
       color: #fff;
     }
-
-    .btn-share {
-      grid-column: 1 / -1;
-      background: #f3eae4;
-      color: var(--primary);
-      border: 1px solid rgba(107, 44, 44, 0.22);
-    }
   </style>
 </head>
 <body>
 
-  <!-- 頂部工具列 -->
+  <!-- 頂部工具列 (已移除框線按鈕) -->
   <header class="top-bar">
     <div class="brand">
       <span class="brand-badge">新化高中輔導室</span>
@@ -566,9 +537,6 @@
       <button type="button" class="tool-btn" id="btn-fontsize" title="切換文字大小">
         <span>🔠 字級：</span><span id="fontsize-label">適中</span>
       </button>
-      <button type="button" class="tool-btn" id="btn-borders" title="顯示或隱藏輸入框提示線">
-        <span>👁️ 框線</span>
-      </button>
       <button type="button" class="tool-btn" id="btn-clear" title="清空所有輸入內容">
         <span>🗑️ 重填</span>
       </button>
@@ -576,7 +544,7 @@
   </header>
 
   <div class="hint-banner">
-    <span>💡 點擊下方學習單上的 <strong>&lt;...&gt; 欄位</strong> 即可直接輸入文字，完成後點擊底部按鈕輸出圖片或 PDF。</span>
+    <span>💡 點擊下方學習單上的 <strong>&lt;欄位&gt;</strong> 即可輸入文字，完成後產生學習單。</span>
   </div>
 
   <!-- 與原 PDF 完全同比例 (1747 : 2481) 的互動式學習單容器 -->
@@ -663,7 +631,7 @@
   <div class="bottom-bar">
     <div class="bottom-inner">
       <button type="button" class="btn-primary" id="btn-export">
-        <span>✨ 送出並產生學習單（圖片 / PDF）</span>
+        <span>✨ 產生學習單</span>
       </button>
     </div>
   </div>
@@ -677,21 +645,18 @@
       </div>
       <div class="modal-body">
         <div class="save-tip">
-          📱 手機使用者可<strong>長按下方圖片直接儲存至相簿</strong>，或點擊下方按鈕下載圖片 / PDF 檔。
+          📱 手機長按下方圖片直接儲存至相簿。
         </div>
         <div class="preview-img-wrap">
           <img id="preview-img" alt="學習單預覽圖" />
         </div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn-download btn-img" id="btn-download-png">
-          🖼️ 下載照片 (PNG)
+        <button type="button" class="btn-download btn-img" id="btn-share-img">
+          📤 分享
         </button>
         <button type="button" class="btn-download btn-pdf" id="btn-download-pdf">
           📄 下載 PDF 檔
-        </button>
-        <button type="button" class="btn-download btn-share" id="btn-share-native" style="display: none;">
-          📤 手機一鍵分享 / 傳送至 LINE 或檔案
         </button>
       </div>
     </div>
@@ -735,7 +700,6 @@
 
     datePicker.addEventListener('change', () => {
       if (datePicker.value) {
-        // 將 YYYY-MM-DD 轉為 YYYY/MM/DD 顯示
         fields.date.value = datePicker.value.replace(/-/g, '/');
       } else {
         fields.date.value = '';
@@ -852,14 +816,6 @@
       applyFontScale();
     });
 
-    // 框線顯示/隱藏
-    const worksheetEl = document.getElementById('worksheet');
-    const btnBorders = document.getElementById('btn-borders');
-    btnBorders.addEventListener('click', () => {
-      const hidden = worksheetEl.classList.toggle('hide-borders');
-      btnBorders.classList.toggle('active', !hidden);
-    });
-
     // 清除重填
     document.getElementById('btn-clear').addEventListener('click', () => {
       if (!confirm('確定要清空目前填寫的所有內容嗎？')) return;
@@ -875,9 +831,6 @@
     // Canvas 高解析度合成引擎 (將底圖 + 7 個欄位文字精準繪製到 1747 x 2481 畫布)
     // =========================================================================
 
-    /**
-     * 將多行/長文字依照最大寬度自動斷行
-     */
     function wrapTextLines(ctx, text, maxWidth) {
       if (!text || !text.trim()) return [];
       const paragraphs = text.replace(/\r\n/g, '\n').split('\n');
@@ -906,9 +859,6 @@
       return lines;
     }
 
-    /**
-     * 在指定方框區域內繪製多行文字（若文字過多會自動微調縮小字級以確保不超出方框）
-     */
     function drawBoxText(ctx, text, boxRect, options = {}) {
       if (!text || !text.trim()) return;
       const {
@@ -930,7 +880,6 @@
       let lines = [];
       let lineHeight = fontSize * lineHeightRatio;
 
-      // 自動縮字以確保總高度不超過方框高度
       while (fontSize >= minFontSize) {
         ctx.font = `700 ${fontSize}px "LXGW WenKai TC", "Kaiti TC", "STKaiti", "DFKai-SB", serif`;
         lines = wrapTextLines(ctx, text, innerW);
@@ -962,13 +911,10 @@
       });
     }
 
-    /**
-     * 在單行欄位繪製文字（若超出寬度自動縮小字級）
-     */
     function drawSingleLineField(ctx, text, rect, options = {}) {
       if (!text || !text.trim()) return;
       const {
-        baseFontSize = 58,
+        baseFontSize = 54,
         color = '#000000',
         align = 'left',
       } = options;
@@ -994,11 +940,7 @@
       ctx.fillText(cleanText, drawX, drawY);
     }
 
-    /**
-     * 合成完整學習單至高解析度離屏 Canvas 並回傳 Canvas
-     */
     async function renderExportCanvas() {
-      // 確保字型已載入完畢（設定逾時保護避免網路不佳時卡住）
       if (document.fonts && document.fonts.ready) {
         try {
           await Promise.race([
@@ -1008,7 +950,6 @@
         } catch (e) {}
       }
 
-      // 確保底圖已載入
       if (!bgImage.complete || bgImage.naturalWidth === 0) {
         await new Promise((resolve) => {
           bgImage.onload = resolve;
@@ -1030,8 +971,8 @@
 
       const scaleMul = fontScaleSteps[fontScaleIdx].scale;
 
-      // 2. 繪製上方 4 個單行欄位（與原 PDF 座標與顏色 1:1 對應）
-      // (1) <在此插入標題> (原 PDF: centerY = 169.5, fontSize = 58.3, color = #000000)
+      // 2. 繪製上方 4 個單行欄位（對應左對齊調整後的精準座標）
+      // (1) <在此插入標題>
       drawSingleLineField(
         ctx,
         fields.title.value,
@@ -1039,28 +980,28 @@
         { baseFontSize: 58, color: '#000000', align: 'center' }
       );
 
-      // (2) ＜班級＞ (原 PDF: x=519, centerY=464.5, fontSize=58.3, color=#6b2c2c)
+      // (2) ＜班級＞ (左對齊後起點 x=457, 寬度 w=405)
       drawSingleLineField(
         ctx,
         fields.className.value,
-        { x: 515, y: 429, w: 330, h: 72 },
-        { baseFontSize: 56, color: '#6b2c2c', align: 'left' }
+        { x: 457, y: 429, w: 405, h: 72 },
+        { baseFontSize: 54, color: '#6b2c2c', align: 'left' }
       );
 
-      // (3) ＜姓名＞ (原 PDF: x=1146, centerY=464.5, fontSize=58.3, color=#6b2c2c)
+      // (3) ＜姓名＞ (起點 x=1158, 寬度 w=414)
       drawSingleLineField(
         ctx,
         fields.studentName.value,
-        { x: 1140, y: 429, w: 432, h: 72 },
-        { baseFontSize: 56, color: '#6b2c2c', align: 'left' }
+        { x: 1158, y: 429, w: 414, h: 72 },
+        { baseFontSize: 54, color: '#6b2c2c', align: 'left' }
       );
 
-      // (4) ＜日期＞ (原 PDF: x=526, centerY=539.5, fontSize=58.3, color=#6b2c2c)
+      // (4) ＜日期＞ (左對齊後起點 x=464, 寬度 w=406)
       drawSingleLineField(
         ctx,
         fields.date.value,
-        { x: 520, y: 504, w: 330, h: 72 },
-        { baseFontSize: 56, color: '#6b2c2c', align: 'left' }
+        { x: 464, y: 504, w: 406, h: 72 },
+        { baseFontSize: 52, color: '#6b2c2c', align: 'left' }
       );
 
       // 3. 繪製下方 3 個大格子多行內容
@@ -1094,13 +1035,12 @@
     }
 
     // =========================================================================
-    // 送出預覽、下載 PNG 照片、下載同比例 PDF、手機原生分享
+    // 產生學習單預覽、純圖片分享、下載同比例 PDF
     // =========================================================================
     const exportModal = document.getElementById('export-modal');
     const previewImg = document.getElementById('preview-img');
-    const btnShareNative = document.getElementById('btn-share-native');
     let latestCanvas = null;
-    let latestDataUrl = '';
+    let latestJpegDataUrl = '';
 
     function getExportFileName(ext) {
       const name = fields.studentName.value.trim() || '同學';
@@ -1110,14 +1050,9 @@
 
     document.getElementById('btn-export').addEventListener('click', async () => {
       latestCanvas = await renderExportCanvas();
-      latestDataUrl = latestCanvas.toDataURL('image/png');
-      previewImg.src = latestDataUrl;
-
-      // 檢查是否支援手機 Web Share API 分享檔案
-      if (navigator.canShare) {
-        btnShareNative.style.display = 'flex';
-      }
-
+      // 採用高品質 JPEG (0.95) 兼顧清晰畫質、手機相簿長按儲存與 LINE 分享速度
+      latestJpegDataUrl = latestCanvas.toDataURL('image/jpeg', 0.95);
+      previewImg.src = latestJpegDataUrl;
       exportModal.classList.add('open');
     });
 
@@ -1131,52 +1066,80 @@
       }
     });
 
-    // 下載 PNG 圖片
-    document.getElementById('btn-download-png').addEventListener('click', () => {
-      if (!latestDataUrl) return;
-      const link = document.createElement('a');
-      link.download = getExportFileName('png');
-      link.href = latestDataUrl;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    });
-
-    // 下載與原 PDF 完全相同比例的 PDF 檔 (419.25 pt x 595.5 pt，對應 1747 : 2481)
-    document.getElementById('btn-download-pdf').addEventListener('click', () => {
-      if (!latestCanvas) return;
-      const { jsPDF } = window.jspdf;
-      const pdfW = 419.25;
-      const pdfH = 595.5;
-
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'pt',
-        format: [pdfW, pdfH],
-        compress: true,
-      });
-
-      // 使用高品質 JPEG 嵌入 PDF 以兼顧畫質與檔案大小
-      const jpegDataUrl = latestCanvas.toDataURL('image/jpeg', 0.95);
-      pdf.addImage(jpegDataUrl, 'JPEG', 0, 0, pdfW, pdfH);
-      pdf.save(getExportFileName('pdf'));
-    });
-
-    // 手機原生分享 (可傳送到 LINE / 儲存影像 / 儲存到檔案)
-    btnShareNative.addEventListener('click', async () => {
+    // 📤 分享按鈕：單純分享圖片檔案（不帶文字標題，避免 LINE 多傳一段文字），若電腦不支援則直接下載圖片
+    document.getElementById('btn-share-img').addEventListener('click', () => {
       if (!latestCanvas) return;
       latestCanvas.toBlob(async (blob) => {
         if (!blob) return;
-        const file = new File([blob], getExportFileName('png'), { type: 'image/png' });
+        const fileName = getExportFileName('jpg');
+        const file = new File([blob], fileName, { type: 'image/jpeg' });
+
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
           try {
-            await navigator.share({
-              title: fields.title.value.trim() || '活動學習單',
-              files: [file],
-            });
-          } catch (err) {}
+            // 只傳入 files，不傳入 title / text，確保純圖片分享
+            await navigator.share({ files: [file] });
+            return;
+          } catch (err) {
+            if (err && err.name === 'AbortError') return;
+          }
         }
-      }, 'image/png');
+
+        // 備援：若瀏覽器不支援原生分享，則直接觸發下載圖片
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.download = fileName;
+        link.href = url;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setTimeout(() => URL.revokeObjectURL(url), 3000);
+      }, 'image/jpeg', 0.95);
+    });
+
+    // 📄 下載 PDF 檔：產生與原 PDF 同比例 (419.25 x 595.5 pt) 的檔案，並解決手機瀏覽器不彈出下載視窗的問題
+    document.getElementById('btn-download-pdf').addEventListener('click', async () => {
+      if (!latestCanvas || !latestJpegDataUrl) return;
+      const jspdfNs = window.jspdf;
+      if (!jspdfNs || !jspdfNs.jsPDF) {
+        alert('PDF 套件載入中，請稍後再試。');
+        return;
+      }
+
+      const pdfW = 419.25;
+      const pdfH = 595.5;
+      const pdf = new jspdfNs.jsPDF({
+        orientation: 'portrait',
+        unit: 'pt',
+        format: [pdfW, pdfH],
+      });
+
+      pdf.addImage(latestJpegDataUrl, 'JPEG', 0, 0, pdfW, pdfH);
+      const fileName = getExportFileName('pdf');
+      const pdfBlob = pdf.output('blob');
+
+      // 在 iOS / Android 手機瀏覽器（特別是 LINE 內建瀏覽器或 Safari），使用原生檔案選單可穩定「儲存到檔案」或傳送至 LINE
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      if (isMobile && navigator.canShare) {
+        const pdfFile = new File([pdfBlob], fileName, { type: 'application/pdf' });
+        if (navigator.canShare({ files: [pdfFile] })) {
+          try {
+            await navigator.share({ files: [pdfFile] });
+            return;
+          } catch (err) {
+            if (err && err.name === 'AbortError') return;
+          }
+        }
+      }
+
+      // 電腦端或一般下載：使用 Blob URL 觸發瀏覽器下載視窗
+      const blobUrl = URL.createObjectURL(pdfBlob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
     });
 
     // 初始化載入草稿
